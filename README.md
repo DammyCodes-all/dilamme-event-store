@@ -92,7 +92,7 @@ Place a screenshot of that log here (after you run the restart test):
 ## What I struggled with
 
 - Handling TypeScript types for Node's `FileHandle` I/O APIs and nullability around an append handle.
-- Ensuring byte-accurate accounting for unicode characters — string length vs UTF-8 byte length matters when seeking by bytes.
+- Ensuring byte-accurate accounting for unicode characters i.e string length vs UTF-8 byte length matters when seeking by bytes.
 
 ## What I learned
 
@@ -119,11 +119,3 @@ Place a screenshot of that log here (after you run the restart test):
 - Practiced thinking in bytes (not characters) when designing durable formats.
 - Re-enforced the value of simple, testable abstractions (store vs HTTP) for restart correctness and integration tests.
 - Improved confidence with Node's low-level file APIs and strategies for safe recovery without external databases.
-
----
-
-If you want, I can now record the single-take demo and prepare the video upload instructions, or I can run the restart test here and paste the actual recovery log screenshot output into the README.
-
-```
-
-```
