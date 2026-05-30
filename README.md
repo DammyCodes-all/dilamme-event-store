@@ -70,30 +70,19 @@ The store has three core components:
 - In-memory index: `Map<id, { offset, length }>` rebuilt from the log on startup.
 - HTTP layer (Express) that writes/reads via the in-memory index and file seeks.
 
-Mermaid diagram:
-
-```mermaid
-flowchart LR
-  A[POST /events] -->|serialize + append| B[events.log (append-only)]
-  B -->|update| C[In-memory index: Map<id,{offset,length}>]
-  D[GET /events/:id] -->|lookup index| C
-  C -->|seek(offset,length)| B
-  B -->|read slice & parse| D
-  Startup -->|stream file lines| C
-```
-
-## Recovery (what you should see on restart)
+## Recovery
 
 On startup the server scans `events.log` line-by-line and rebuilds the in-memory index. You should see a log line like:
 
 ```
-Recovered N events from /path/to/events.log
+
+Recovered `N` events from /path/to/events.log
+
 ```
 
 Place a screenshot of that log here (after you run the restart test):
 
 <img width="616" height="242" alt="image" src="https://github.com/user-attachments/assets/2a945c81-d5e4-4ba3-a0fb-b1ba7b0f0d44" />
-
 
 ## Core concepts
 
@@ -134,3 +123,7 @@ Place a screenshot of that log here (after you run the restart test):
 ---
 
 If you want, I can now record the single-take demo and prepare the video upload instructions, or I can run the restart test here and paste the actual recovery log screenshot output into the README.
+
+```
+
+```
