@@ -1,0 +1,35 @@
+{
+  "name": "dilamme-event-store",
+  "version": "1.0.0",
+  "description": "A append only event store for Dilamme (HNG i14 Stage 8 task).",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "^11.0.8",
+      "onFail": "download"
+    }
+  },
+  "type": "module",
+  "dependencies": {
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.1",
+    "@types/node": "^22.15.21",
+    "@types/supertest": "^6.0.3",
+    "supertest": "^7.1.1",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
+  }
+}
