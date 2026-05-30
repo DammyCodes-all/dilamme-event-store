@@ -1,46 +1,46 @@
-# Append-Only Event Store
+This is a tiny HTTP service that treats a newline-delimited JSON file as the database. Every event is appended to `events.log` as a single JSON object on its own line. The server keeps a small in-memory index that maps event ids to byte offsets and lengths, so reads go straight to the exact bytes on disk.
 
-Small HTTP event store that uses a newline-delimited JSON append-only log (`events.log`) as the single source of truth and an in-memory index (`Map<id, { offset, length }>`). Built with Node.js, Express and TypeScript.
+I built this with Node.js, Express and TypeScript. The goal was to prove a simple, crash-safe write path and a fast read path that survives restarts.
 
 ## Quick setup
 
 Requirements: Node.js (v18+ recommended) and pnpm.
 
-Install:
+Install dependencies:
 
 ```bash
 pnpm install
 ```
 
-Run in development (auto-reloads via `tsx`):
+Run in development with live reload:
 
 ```bash
 pnpm dev
 ```
 
-Start normally:
+Start the server:
 
 ```bash
 pnpm start
 ```
 
-Run tests (unit + integration):
+Run the tests (unit and integration):
 
 ```bash
 pnpm test
 ```
 
-Config:
+Config note:
 
-- The log path can be overridden with `EVENTS_LOG_PATH`. By default the file is `events.log` in the project root.
+- Change the log file path with `EVENTS_LOG_PATH`. By default the server writes `events.log` in the current directory.
 
 ## API
 
-- `POST /events` — Accepts any JSON body. The server adds `{ id, createdAt }`, appends one JSON object per line to the log, updates the in-memory index, and returns `201` with the stored event.
-- `GET /events/:id` — Uses the in-memory index to seek the file at `offset` and `length` and returns the parsed event. Returns `404` when missing.
-- `GET /stats` — Returns `{ total, bytes }` describing number of events and total bytes in the log.
+- `POST /events` — Send any JSON body. The server adds `id` and `createdAt`, appends the event as one JSON line to the log file, updates the in-memory index, and returns the stored event with status 201.
+- `GET /events/:id` — Look up the id in the index, seek to the recorded byte offset and length, parse that slice, and return the event. Returns 404 if the id is not present.
+- `GET /stats` — Returns `{ total, bytes }` where `total` is the recovered or stored event count and `bytes` is the current tracked file size.
 
-Examples:
+Examples
 
 Write an event:
 
@@ -50,72 +50,76 @@ curl -s -X POST http://localhost:3000/events \
   -d '{"user":"alice","action":"signup"}' | jq .
 ```
 
-Read an event (replace `<id>` with an id returned by POST):
+Read an event (replace `<id>` with the id returned earlier):
 
 ```bash
 curl -s http://localhost:3000/events/<id> | jq .
 ```
 
-Stats:
+Check stats:
 
 ```bash
 curl -s http://localhost:3000/stats | jq .
 ```
 
-## Architecture
+## How it works
 
-The store has three core components:
+There are three parts:
 
-- Append-only log (on disk): newline-delimited JSON, `events.log`.
-- In-memory index: `Map<id, { offset, length }>` rebuilt from the log on startup.
-- HTTP layer (Express) that writes/reads via the in-memory index and file seeks.
+- a persistent append-only log file on disk where each line is a JSON object
+- an in-memory `Map<id, { offset, length }>` rebuilt from the log on startup
+- a small Express HTTP layer that writes to the file and reads by seeking to recorded offsets
 
-## Recovery
+On startup the server streams the log file line by line to rebuild the index. That lets the process die and restart without losing data because the log file is the source of truth.
 
-On startup the server scans `events.log` line-by-line and rebuilds the in-memory index. You should see a log line like:
+## Recovery message
 
-```
-
-Recovered `N` events from /path/to/events.log
+When the server starts it prints a recovery message like this:
 
 ```
+Recovered N events from /path/to/events.log
+```
 
-Place a screenshot of that log here (after you run the restart test):
+Restart log screenshot:
 
 <img width="616" height="242" alt="image" src="https://github.com/user-attachments/assets/2a945c81-d5e4-4ba3-a0fb-b1ba7b0f0d44" />
 
-## Core concepts
+Append-only writes are simple and robust. Appending to a file either completes or it does not, and earlier data stays intact if the process crashes. That makes recovery straightforward: replay the log from the start and rebuild state.
 
-- Append-only durability: writes are append-only and atomic at the file-append syscall level; if the process crashes while appending, previous writes remain intact and can be replayed. There are no in-place updates that can leave partial state or require expensive compaction for correctness.
-- Index for fast reads: scanning the whole file for every read is O(N). An in-memory index maps IDs to file offsets and byte lengths so reads are O(1) to locate and O(length) to fetch the exact slice.
+Reading by scanning the whole file would be slow. The in-memory index records exactly where each event lives in the file so reads are fast. Look up in memory, then do a single small file read for the event bytes.
 
 ## What I struggled with
 
-- Handling TypeScript types for Node's `FileHandle` I/O APIs and nullability around an append handle.
-- Ensuring byte-accurate accounting for unicode characters i.e string length vs UTF-8 byte length matters when seeking by bytes.
+- Getting TypeScript types right for Node's file APIs and handling the possibility the append handle was not yet open
+- Ensuring offsets are byte counts, not character counts. UTF-8 characters can be multiple bytes, so `Buffer.byteLength` is what matters when seeking
 
 ## What I learned
 
-- How to safely append newline-delimited JSON and compute precise byte offsets using `Buffer.byteLength`.
-- Using `readline` to stream a log file and rebuild an index without loading the entire file to memory.
-- Properly wiring a small Express app to an injected persistence layer for easier testing and restart proofs.
+- How to append newline-delimited JSON safely and compute byte-accurate offsets
+- How to stream a file with `readline` to rebuild an index without loading the entire file into memory
+- Why separating the persistence layer from the HTTP layer makes restarting and testing easier
 
-## Resources consulted
+## Resources I used
 
-- Node.js `fs` / `fs.promises` documentation
-- MDN: Character encodings and UTF-8 byte length
-- StackOverflow threads about file offsets and Node `FileHandle` usage
+- Node.js `fs` and `fs.promises` docs
+- MDN pages on UTF-8 and byte lengths
 
-## Demo checklist (one-take 30s video)
+## Demo checklist
 
-1. Start server: `pnpm start` (shows the `Using log file:` line).
-2. POST 2–3 events with `curl` and show returned IDs.
-3. Stop the server (Ctrl+C).
-4. Start the server again: show the `Recovered N events` log line.
-5. Use `curl` to `GET /events/<id>` for an earlier id and show the result.
+1. Start the server with `pnpm start` and show the "Using log file" message
+2. POST two or three events and show the returned ids
+3. Stop the server (Ctrl+C)
+4. Start it again and show the `Recovered N events` log line
+5. `GET` one of the earlier ids to show it still resolves
 
 ## How this made me a better backend developer
 
-- Practiced thinking in bytes (not characters) when designing durable formats.
-- Re-enforced the value of simple, testable abstractions (store vs HTTP) for restart correctness and integration tests.
-- Improved confidence with Node's low-level file APIs and strategies for safe recovery without external databases.
+- I now think in bytes when designing durable formats instead of characters
+- I appreciate small, testable abstractions more, especially when proving restart safety
+- I have more confidence using Node's low-level file APIs for production-like durability proofs
+
+---
+
+<div align="center">
+  Built with 💜 by aluminate
+</div>
