@@ -109,7 +109,21 @@ export class EventLogStore {
   }
 
   private async initialize(): Promise<number> {
-    await mkdir(dirname(this.filePath), { recursive: true });
+    const parentDir = dirname(this.filePath);
+
+    if (parentDir && parentDir !== "/") {
+      try {
+        await mkdir(parentDir, { recursive: true });
+      } catch (err: unknown) {
+        const e = err as { code?: string; message?: string };
+        if (e.code === "EACCES") {
+          throw new Error(
+            `Permission denied while creating directory ${parentDir}. Please choose a writable EVENTS_LOG_PATH or run with appropriate permissions.`,
+          );
+        }
+        throw err;
+      }
+    }
 
     const recoveredCount = await this.rebuildIndexFromLog();
     this.appendHandle = await open(this.filePath, "a");
