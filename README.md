@@ -92,7 +92,8 @@ Recovered N events from /path/to/events.log
 
 Place a screenshot of that log here (after you run the restart test):
 
-![recovery-screenshot](docs/recovery-screenshot.png)
+<img width="616" height="242" alt="image" src="https://github.com/user-attachments/assets/2a945c81-d5e4-4ba3-a0fb-b1ba7b0f0d44" />
+
 
 ## Core concepts
 
