@@ -4,8 +4,8 @@
   "description": "A append only event store for Dilamme (HNG i14 Stage 8 task).",
   "main": "dist/server.js",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
-    "start": "tsx src/server.ts",
+    "dev": "node api.js && tsx watch src/server.ts",
+    "start": "node api.js && tsx src/server.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
